@@ -1,15 +1,5 @@
-#region File Description
-//-----------------------------------------------------------------------------
-// MonoGame.iOS.ReproGame.cs
-//
-// Microsoft XNA Community Game Platform
-// Copyright (C) Microsoft Corporation. All rights reserved.
-//-----------------------------------------------------------------------------
-#endregion
-
-#region Using Statements
 using System;
-
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -19,8 +9,6 @@ using Microsoft.Xna.Framework.Storage;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Media;
 
-#endregion
-
 namespace MonoGame.iOS.Repro
 {
     /// <summary>
@@ -29,13 +17,14 @@ namespace MonoGame.iOS.Repro
     public class Game1 : Game
     {
 
-	#region Fields
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
         Texture2D logoTexture;
-	#endregion
-
-	#region Initialization
+        List<Vector2> locations = new List<Vector2>();
+        RasterizerState rasterState;
+        SamplerState samplerState;
+        BlendState blendState;
+        Matrix camera = Matrix.Identity;
 
         public Game1()
         {
@@ -44,17 +33,16 @@ namespace MonoGame.iOS.Repro
 			
             Content.RootDirectory = "Content";
 
-            //graphics.SupportedOrientations = 
+            rasterState = new RasterizerState();
+            //breaks it
+            rasterState.ScissorTestEnable = true;
+            //fixes it
+            //rasterState.ScissorTestEnable = false;
+            rasterState.CullMode = CullMode.CullCounterClockwiseFace;
+            blendState = BlendState.NonPremultiplied;
+            samplerState = SamplerState.LinearWrap;
+            graphics.SupportedOrientations = DisplayOrientation.LandscapeLeft | DisplayOrientation.LandscapeRight;
             graphics.IsFullScreen = true;
-        }
-
-        /// <summary>
-        /// Overridden from the base Game.Initialize. Once the GraphicsDevice is setup,
-        /// we'll use the viewport to initialize some values.
-        /// </summary>
-        protected override void Initialize()
-        {
-            base.Initialize();
         }
 
 
@@ -63,16 +51,12 @@ namespace MonoGame.iOS.Repro
         /// </summary>
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be use to draw textures.
             spriteBatch = new SpriteBatch(graphics.GraphicsDevice);
 			
-            // TODO: use this.Content to load your game content here eg.
             logoTexture = Content.Load<Texture2D>("logo");
+
+            locations.Add(new Vector2((graphics.PreferredBackBufferWidth - logoTexture.Width) / 2, (graphics.PreferredBackBufferHeight - logoTexture.Height) / 2));
         }
-
-	#endregion
-
-	#region Update and Draw
 
         /// <summary>
         /// Allows the game to run logic such as updating the world,
@@ -81,7 +65,14 @@ namespace MonoGame.iOS.Repro
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            // TODO: Add your update logic here			
+            var touches = TouchPanel.GetState();
+            foreach (var touch in touches)
+            {
+                var position = touch.Position;
+                position.X -= logoTexture.Width / 2;
+                position.Y -= logoTexture.Height / 2;
+                locations.Add(position);
+            }
             		
             base.Update(gameTime);
         }
@@ -95,17 +86,16 @@ namespace MonoGame.iOS.Repro
             // Clear the backbuffer
             graphics.GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            spriteBatch.Begin();
+            spriteBatch.Begin(SpriteSortMode.Deferred, blendState, samplerState, DepthStencilState.None, rasterState, null, camera);
 
             // draw the logo
-            spriteBatch.Draw(logoTexture, new Vector2(130, 200), Color.White);
+            foreach (var location in locations)
+                spriteBatch.Draw(logoTexture, location, Color.White);
 
             spriteBatch.End();
 
             //TODO: Add your drawing code here
             base.Draw(gameTime);
         }
-
-	#endregion
     }
 }
